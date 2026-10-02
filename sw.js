@@ -1,4 +1,4 @@
-const CACHE = 'focus-bitch-v2';
+const CACHE = 'focus-bitch-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -25,11 +25,24 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy));
-      return res;
-    }))
-  );
+  const url = new URL(e.request.url);
+  const isCode = /\.(html|css|js)$/.test(url.pathname) || url.pathname === '/';
+
+  if (isCode) {
+    // NETWORK-FIRST: свежее из сети, кэш как fallback
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+  } else {
+    // CACHE-FIRST для картинок (они не меняются)
+    e.respondWith(
+      caches.match(e.request).then(r => r || fetch(e.request))
+    );
+  }
 });

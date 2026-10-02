@@ -112,6 +112,26 @@
     </div>
   </div>
 </div>
+<!-- Модалка: подтверждение удаления -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h2 class="modal-title">УДАЛИТЬ?</h2>
+    <p class="confirm-text" id="confirmText">Это действие нельзя отменить.</p>
+    <div class="modal-buttons">
+      <button class="btn-accent" id="confirmYes">УДАЛИТЬ</button>
+      <button class="btn-muted" id="confirmNo">Отмена</button>
+    </div>
+  </div>
+</div>
+<!-- Онбординг -->
+<div class="onboarding-overlay" id="onboardingOverlay" style="display:none">
+  <div class="onboarding-inner">
+    <h1 class="onboarding-title" id="onboardingTitle">ДОБРО ПОЖАЛОВАТЬ</h1>
+    <p class="onboarding-sub">Выбери привычки, которые хочешь отслеживать. Потом можно добавить свои или удалить ненужные.</p>
+    <div class="onboarding-list" id="onboardingList"></div>
+    <button class="onboarding-btn" id="onboardingBtn" onclick="finishOnboarding()">НАЧАТЬ</button>
+  </div>
+</div>
 
 <script>
 if ('serviceWorker' in navigator) {

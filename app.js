@@ -1,4 +1,4 @@
-// ===== FOCUS BITCH PWA v6 =====
+// ===== FOCUS BITCH PWA v7 =====
 
 let tasks = JSON.parse(localStorage.getItem('fb_tasks') || '[]');
 let habits = JSON.parse(localStorage.getItem('fb_habits') || '[]');
@@ -14,10 +14,23 @@ let viewDayOffset = 0;
 let practiceGoal = parseInt(localStorage.getItem('fb_goal') || '30');
 let selectedPracticeType = 'Yoga';
 let openLangName = null;
+let openTaskId = null;
 
 const PRACTICE_TYPES = ['Yoga','Stretching','Gym','Boxing','Tennis','Run','Другое'];
 
-// ===== Единый словарь (собираем из подключаемых файлов) =====
+const ONBOARDING_HABITS = [
+  { emoji: '💊', name: 'Витамины' },
+  { emoji: '💧', name: 'Вода 2 литра' },
+  { emoji: '🧘', name: 'Йога 15 минут' },
+  { emoji: '📖', name: 'Чтение 20 минут' },
+  { emoji: '🚶', name: 'Прогулка' },
+  { emoji: '😴', name: 'Сон до 23:00' },
+  { emoji: '📵', name: 'Без соцсетей час' },
+  { emoji: '🏃', name: 'Спорт 30 минут' },
+  { emoji: '☕', name: 'Без кофе после 16:00' },
+  { emoji: '🦷', name: 'Зубы 2 раза' }
+];
+
 const DICT = {
   'АНГЛИЙСКИЙ': [...(window.DICT_EN || []), ...(window.DICT_EN2 || [])],
   'АРМЯНСКИЙ': [...(window.DICT_HY || [])],
@@ -75,6 +88,51 @@ function practiceMinFor(dateStr) {
   return practices.filter(p => p.date === dateStr).reduce((s, p) => s + p.minutes, 0);
 }
 
+// ═══ Streak привычки (мягкий, Duolingo-style) ═══
+function habitStreak(h) {
+  if (!h.dates) return 0;
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 365; i++) {
+    const ds = d.toISOString().slice(0, 10);
+    if (h.dates[ds]) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      if (i === 0) { d.setDate(d.getDate() - 1); continue; }
+      break;
+    }
+  }
+  return streak;
+}
+
+// ═══ Миграция старых привычек (days → dates) ═══
+(function migrateHabits() {
+  if (!Array.isArray(habits)) return;
+  let migrated = false;
+  habits.forEach(h => {
+    if (!h.dates) {
+      h.dates = {};
+      if (h.days) {
+        const vd = new Date();
+        const dow = vd.getDay();
+        const monOff = dow === 0 ? -6 : 1 - dow;
+        for (let i = 0; i < 7; i++) {
+          if (h.days[i]) {
+            const d = new Date(vd);
+            d.setDate(vd.getDate() + monOff + i);
+            h.dates[d.toISOString().slice(0, 10)] = true;
+          }
+        }
+      }
+      if (!h.emoji) h.emoji = '🎯';
+      delete h.days;
+      migrated = true;
+    }
+  });
+  if (migrated) save();
+})();
+
 function progressPct() {
   const ds = viewDateStr();
   const s = statsFor(ds);
@@ -100,10 +158,11 @@ function computeStreak() {
     const dayTasks = tasks.filter(t => t.date === ds);
     const dayPractice = practices.filter(p => p.date === ds);
     const dayLang = langSessions.filter(x => x.date === ds);
+    const dayHabit = habits.some(h => h.dates && h.dates[ds]);
     const tasksOk = dayTasks.length > 0 && dayTasks.every(t => t.done);
     const practiceOk = dayPractice.length > 0;
     const langOk = dayLang.length > 0;
-    if (tasksOk || practiceOk || langOk) { streak++; d.setDate(d.getDate() - 1); }
+    if (tasksOk || practiceOk || langOk || dayHabit) { streak++; d.setDate(d.getDate() - 1); }
     else { if (i === 0) { d.setDate(d.getDate() - 1); continue; } break; }
   }
   return streak;
@@ -268,6 +327,9 @@ function renderToday(c) {
     historyHtml;
 }
 
+// ═══════════════════════════════════════════════════════
+// TASKS — с раскрытием, датой, приоритетом, удалением
+// ═══════════════════════════════════════════════════════
 function renderTasks(c) {
   const ds = viewDateStr();
   const dayTasks = tasks.filter(t => t.date === ds);
@@ -280,63 +342,308 @@ function renderTasks(c) {
     list.innerHTML = '<div class="empty-state"><div class="empty-title">just start.</div><div class="empty-sub">добавь первую запись</div></div>';
   } else {
     dayTasks.forEach(t => {
-      const div = document.createElement('div');
-      div.className = 'task-item';
-      div.innerHTML = '<button class="task-check ' + (t.done ? 'done' : '') + '" data-id="' + t.id + '"></button>' +
-        '<span class="task-text ' + (t.done ? 'done' : '') + '">' + escapeHtml(t.text) + '</span>';
-      list.appendChild(div);
+      const row = document.createElement('div');
+      row.className = 'task-row';
+      
+      const prio = t.prio === 'important' ? 'Важно' : 'Обычно';
+      const prioLabel = t.prio === 'important' ? '<span class="meta-prio">⚡ ' + prio + '</span>' : prio;
+      const dateLabel = t.date === todayStr() ? 'Сегодня' : 
+                        (t.date === viewDateStr() ? 'выбранный день' : t.date);
+      
+      const expanded = openTaskId === t.id;
+      
+      row.innerHTML =
+        '<div class="task-main">' +
+          '<button class="task-check ' + (t.done ? 'done' : '') + '" data-check="' + t.id + '"></button>' +
+          '<div class="task-body" data-expand="' + t.id + '">' +
+            '<span class="task-text ' + (t.done ? 'done' : '') + '">' + escapeHtml(t.text) + '</span>' +
+            '<div class="task-meta">' + dateLabel + ' · ' + prioLabel + '</div>' +
+          '</div>' +
+          '<button class="task-del" data-del="' + t.id + '">×</button>' +
+        '</div>' +
+        '<div class="task-expand' + (expanded ? ' open' : '') + '">' +
+          '<div class="task-expand-label">Дата</div>' +
+          '<div class="task-pills-row">' +
+            '<button class="task-pill' + (t.date === todayStr() ? ' selected' : '') + '" data-date="' + t.id + '" data-val="' + todayStr() + '">Сегодня</button>' +
+            '<button class="task-pill' + (t.date === tomorrowStr() ? ' selected' : '') + '" data-date="' + t.id + '" data-val="' + tomorrowStr() + '">Завтра</button>' +
+          '</div>' +
+          '<div class="task-expand-label">Приоритет</div>' +
+          '<div class="task-pills-row">' +
+            '<button class="task-pill prio' + (t.prio === 'important' ? ' selected' : '') + '" data-prio="' + t.id + '" data-val="important">Важно</button>' +
+            '<button class="task-pill prio' + (t.prio !== 'important' ? ' selected' : '') + '" data-prio="' + t.id + '" data-val="normal">Обычно</button>' +
+          '</div>' +
+        '</div>';
+      list.appendChild(row);
     });
   }
+  
   const input = document.getElementById('taskInput');
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter' && input.value.trim()) {
-      tasks.push({ id: Date.now(), text: input.value.trim(), done: false, date: ds });
+      tasks.push({ id: Date.now(), text: input.value.trim(), done: false, date: ds, prio: 'normal' });
       save(); renderAll();
       setTimeout(() => { const el = document.getElementById('taskInput'); if (el) el.focus(); }, 10);
     }
   });
-  list.querySelectorAll('.task-check').forEach(btn => {
+
+  list.querySelectorAll('[data-check]').forEach(btn => {
     btn.onclick = () => {
-      const id = +btn.dataset.id;
+      const id = +btn.dataset.check;
       const t = tasks.find(x => x.id === id);
       if (t) { t.done = !t.done; save(); renderAll(); }
     };
   });
+
+  list.querySelectorAll('[data-expand]').forEach(el => {
+    el.onclick = () => {
+      const id = +el.dataset.expand;
+      openTaskId = openTaskId === id ? null : id;
+      renderAll();
+    };
+  });
+
+  list.querySelectorAll('[data-del]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const id = +btn.dataset.del;
+      const t = tasks.find(x => x.id === id);
+      if (t) openConfirm('Удалить задачу "<strong>' + escapeHtml(t.text) + '</strong>"?', () => {
+        tasks = tasks.filter(x => x.id !== id);
+        openTaskId = null;
+        save(); renderAll();
+      });
+    };
+  });
+
+  list.querySelectorAll('[data-date]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const id = +btn.dataset.date;
+      const val = btn.dataset.val;
+      const t = tasks.find(x => x.id === id);
+      if (t) { t.date = val; save(); renderAll(); }
+    };
+  });
+
+  list.querySelectorAll('[data-prio]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const id = +btn.dataset.prio;
+      const val = btn.dataset.val;
+      const t = tasks.find(x => x.id === id);
+      if (t) { t.prio = val; save(); renderAll(); }
+    };
+  });
+
   input.focus();
 }
 
+function tomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// ═══════════════════════════════════════════════════════
+// HABITS — карточки с пилюлями дней, streak, удаление
+// ═══════════════════════════════════════════════════════
 function renderHabits(c) {
   c.innerHTML =
     '<h2 class="section-title">ПРИВЫЧКИ</h2>' +
     '<input type="text" class="task-input" id="habitInput" placeholder="Название привычки..." autocomplete="off">' +
+    '<button class="quick-add" id="onboardBtn" style="margin-bottom:16px">📚 Выбрать из готовых</button>' +
     '<div id="habitList"></div>';
+  
   const list = document.getElementById('habitList');
   if (habits.length === 0) {
     list.innerHTML = '<div class="empty-state"><div class="empty-title">пока пусто</div><div class="empty-sub">добавь первую привычку</div></div>';
   } else {
+    const vd = viewDate();
+    const dow = vd.getDay();
+    const monOff = dow === 0 ? -6 : 1 - dow;
+    const todayS = todayStr();
+    
     habits.forEach(h => {
-      const div = document.createElement('div');
-      div.className = 'habit-item';
-      div.innerHTML = '<div class="habit-name">' + escapeHtml(h.name) + '</div><div class="habit-days" id="hd-' + h.id + '"></div>';
-      list.appendChild(div);
-      const days = document.getElementById('hd-' + h.id);
+      const card = document.createElement('div');
+      card.className = 'habit-card';
+      
+      const st = habitStreak(h);
+      const streakHtml = st > 0 ? '🔥 ' + st : '';
+      
+      let daysHtml = '<div class="habit-days">';
       for (let i = 0; i < 7; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'habit-check' + (h.days[i] ? ' done' : '');
-        btn.onclick = () => { h.days[i] = !h.days[i]; save(); renderAll(); };
-        days.appendChild(btn);
+        const d = new Date(vd);
+        d.setDate(vd.getDate() + monOff + i);
+        const ds = d.toISOString().slice(0, 10);
+        const done = h.dates && h.dates[ds];
+        const isToday = ds === todayS;
+        daysHtml +=
+          '<div class="habit-day-col">' +
+            '<div class="habit-day-label">' + shortDay(d) + '</div>' +
+            '<button class="habit-check' + (done ? ' done' : '') + (isToday ? ' today' : '') + '" ' +
+              'data-habit="' + h.id + '" data-date="' + ds + '"></button>' +
+          '</div>';
       }
+      daysHtml += '</div>';
+      
+      card.innerHTML =
+        '<div class="habit-header">' +
+          '<span class="habit-emoji">' + (h.emoji || '🎯') + '</span>' +
+          '<span class="habit-name" data-edit="' + h.id + '">' + escapeHtml(h.name) + '</span>' +
+          (streakHtml ? '<span class="habit-streak">' + streakHtml + '</span>' : '') +
+          '<button class="habit-del" data-del="' + h.id + '">×</button>' +
+        '</div>' +
+        daysHtml;
+      list.appendChild(card);
     });
   }
+  
   const input = document.getElementById('habitInput');
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter' && input.value.trim()) {
-      habits.push({ id: Date.now(), name: input.value.trim(), days: [0,0,0,0,0,0,0] });
+      habits.push({ id: Date.now(), name: input.value.trim(), emoji: '🎯', dates: {} });
       save(); renderAll();
       setTimeout(() => { const el = document.getElementById('habitInput'); if (el) el.focus(); }, 10);
     }
   });
+
+  list.querySelectorAll('[data-habit]').forEach(btn => {
+    btn.onclick = () => {
+      const id = +btn.dataset.habit;
+      const ds = btn.dataset.date;
+      const h = habits.find(x => x.id === id);
+      if (h) {
+        if (!h.dates) h.dates = {};
+        if (h.dates[ds]) delete h.dates[ds];
+        else h.dates[ds] = true;
+        save(); renderAll();
+      }
+    };
+  });
+
+  list.querySelectorAll('[data-del]').forEach(btn => {
+    btn.onclick = () => {
+      const id = +btn.dataset.del;
+      const h = habits.find(x => x.id === id);
+      if (h) openConfirm('Удалить привычку "<strong>' + (h.emoji || '🎯') + ' ' + escapeHtml(h.name) + '</strong>"?', () => {
+        habits = habits.filter(x => x.id !== id);
+        save(); renderAll();
+      });
+    };
+  });
+
+  list.querySelectorAll('[data-edit]').forEach(el => {
+    el.onclick = () => {
+      const id = +el.dataset.edit;
+      const h = habits.find(x => x.id === id);
+      if (h) {
+        const newName = prompt('Название привычки:', h.name);
+        if (newName && newName.trim()) {
+          h.name = newName.trim();
+          save(); renderAll();
+        }
+      }
+    };
+  });
+
+  document.getElementById('onboardBtn').onclick = () => showOnboarding(true);
+
   input.focus();
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIRM MODAL
+// ═══════════════════════════════════════════════════════
+let confirmCallback = null;
+
+function openConfirm(text, cb) {
+  document.getElementById('confirmText').innerHTML = text;
+  confirmCallback = cb;
+  document.getElementById('confirmModal').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('open');
+  confirmCallback = null;
+}
+
+document.getElementById('confirmYes').onclick = () => {
+  if (confirmCallback) confirmCallback();
+  closeConfirm();
+};
+
+document.getElementById('confirmNo').onclick = closeConfirm;
+
+document.getElementById('confirmModal').onclick = (e) => {
+  if (e.target.id === 'confirmModal') closeConfirm();
+};
+
+// ═══════════════════════════════════════════════════════
+// ONBOARDING
+// ═══════════════════════════════════════════════════════
+let onboardingSelected = new Set();
+
+function showOnboarding(fromSettings) {
+  const overlay = document.getElementById('onboardingOverlay');
+  if (!overlay) return;
+  
+  if (!fromSettings) {
+    onboardingSelected = new Set();
+  }
+  
+  const list = document.getElementById('onboardingList');
+  list.innerHTML = '';
+  
+  ONBOARDING_HABITS.forEach((h, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'onboarding-item' + (onboardingSelected.has(h.name) ? ' selected' : '');
+    btn.dataset.name = h.name;
+    btn.innerHTML =
+      '<span class="onboarding-emoji">' + h.emoji + '</span>' +
+      '<span class="onboarding-text">' + escapeHtml(h.name) + '</span>' +
+      '<span class="onboarding-check"></span>';
+    btn.onclick = () => {
+      if (onboardingSelected.has(h.name)) onboardingSelected.delete(h.name);
+      else onboardingSelected.add(h.name);
+      btn.classList.toggle('selected');
+    };
+    list.appendChild(btn);
+  });
+  
+  const title = document.getElementById('onboardingTitle');
+  const btn = document.getElementById('onboardingBtn');
+  if (fromSettings) {
+    title.textContent = 'ДОБАВИТЬ ИЗ ГОТОВЫХ';
+    btn.textContent = 'ДОБАВИТЬ ВЫБРАННЫЕ';
+  } else {
+    title.textContent = 'ДОБРО ПОЖАЛОВАТЬ В FOCUS BITCH';
+    btn.textContent = 'НАЧАТЬ';
+  }
+  
+  document.getElementById('onboardingOverlay').style.display = 'block';
+}
+
+function finishOnboarding() {
+  const fromSettings = document.getElementById('onboardingTitle').textContent === 'ДОБАВИТЬ ИЗ ГОТОВЫХ';
+  
+  ONBOARDING_HABITS.forEach(h => {
+    if (onboardingSelected.has(h.name)) {
+      const exists = habits.find(x => x.name === h.name);
+      if (!exists) {
+        habits.push({ id: Date.now() + Math.random(), name: h.name, emoji: h.emoji, dates: {} });
+      }
+    }
+  });
+  
+  save();
+  
+  if (!fromSettings) {
+    localStorage.setItem('fb_onboarding_done', 'true');
+  }
+  
+  document.getElementById('onboardingOverlay').style.display = 'none';
+  onboardingSelected = new Set();
+  renderAll();
 }
 
 function renderPractice(c) {
@@ -584,6 +891,7 @@ function jumpToToday() {
 function switchTab(t) {
   activeTab = t;
   openLangName = null;
+  openTaskId = null;
   document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === t));
   renderAll();
 }
@@ -603,5 +911,12 @@ document.getElementById('prevWeek').onclick = () => { viewDayOffset -= 7; render
 document.getElementById('nextWeek').onclick = () => { viewDayOffset += 7; renderAll(); };
 document.getElementById('dateLine').onclick = openCalendarModal;
 document.getElementById('dateLine').style.cursor = 'pointer';
+
+// Первый запуск → онбординг
+if (!localStorage.getItem('fb_onboarding_done')) {
+  document.addEventListener('DOMContentLoaded', () => {
+    showOnboarding(false);
+  });
+}
 
 renderAll();
