@@ -1,0 +1,437 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #1F1815;
+  --surface: #2A1F1A;
+  --surface-hov: #3A2C24;
+  --input: #1A1310;
+  --text: #E8DCC8;
+  --muted: #A89880;
+  --divider: #3A2C22;
+  --accent: #B8956A;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px 20px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { max-width: 560px; margin: 0 auto; }
+
+/* === Header === */
+.header { position: relative; padding-bottom: 16px; }
+
+.date-line {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 300;
+  margin-bottom: 24px;
+}
+
+.ring-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  text-align: center;
+}
+
+.ring { width: 88px; height: 88px; }
+.ring-pct {
+  font-size: 18px;
+  font-weight: 700;
+  fill: var(--text);
+}
+.ring-label {
+  font-size: 7px;
+  fill: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.streak {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* === Day pills === */
+.day-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 20px 0 8px;
+  padding: 6px 0;
+}
+
+.pills {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.pill {
+  flex: 1;
+  padding: 6px 2px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+  text-align: center;
+}
+
+.pill .pill-day {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.pill .pill-num {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.pill.active {
+  background: var(--surface);
+  color: var(--accent);
+}
+.pill.today .pill-num { color: var(--accent); }
+
+.arrow {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 20px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* === Tabs === */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--divider);
+  margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  flex: 1;
+  padding: 10px 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* === Content === */
+.content { padding-top: 8px; }
+
+.section-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 20px;
+  letter-spacing: -0.01em;
+}
+
+.summary-line {
+  font-size: 18px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.summary-line.small {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.quick-add {
+  display: block;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 14px;
+  padding: 8px 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.quick-add:active { opacity: 0.7; }
+
+/* === Task list === */
+.task-input {
+  width: 100%;
+  background: var(--input);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 15px;
+  padding: 12px 16px;
+  font-family: inherit;
+  margin-bottom: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.task-input:focus { border-color: var(--accent); }
+.task-input::placeholder { color: var(--muted); font-style: italic; }
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.task-check {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.task-check.done {
+  background: var(--accent);
+  border-color: var(--accent);
+  position: relative;
+}
+
+.task-check.done::after {
+  content: "✓";
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.task-text {
+  flex: 1;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.task-text.done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.task-prio {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+
+.empty-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.empty-sub { font-size: 13px; }
+
+/* === Модалки === */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 11, 9, 0.85);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-accent {
+  flex: 1;
+  padding: 12px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.btn-muted {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* === Календарь === */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.cal-day-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-hov);
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.cal-day.active { background: var(--accent); color: var(--bg); }
+.cal-day.today { color: var(--accent); font-weight: 700; }
+
+
+/* === Слово дня === */
+.daily-card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 30px;
+  text-align: center;
+}
+
+.daily-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.daily-word {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.1;
+}
+
+.daily-trans {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.daily-mean {
+  font-size: 18px;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+
+.daily-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.daily-buttons .btn-accent,
+.daily-buttons .btn-muted {
+  padding: 10px;
+  font-size: 12px;
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1F1815">
+<title>FOCUS BITCH.</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="date-line" id="dateLine">СЕГОДНЯ, 2 ОКТЯБРЯ</div>
+    <h1 class="title">FOCUS BITCH.</h1>
+    <p class="subtitle">follow the plan, not the mood.</p>
+    
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 110 110">
+        <circle cx="55" cy="55" r="50" fill="none" stroke="#3A2C22" stroke-width="3"/>
+        <circle id="ringOuter" cx="55" cy="55" r="50" fill="none" 
+                stroke="#B8956A" stroke-width="3" stroke-linecap="round"
+                stroke-dasharray="0 314" transform="rotate(-90 55 55)" style="display:none"/>
+        <circle cx="55" cy="55" r="42" fill="none" stroke="#3A2C22" stroke-width="6"/>
+        <circle id="ringProgress" cx="55" cy="55" r="42" fill="none" 
+                stroke="#B8956A" stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="0 264" transform="rotate(-90 55 55)"/>
+        <text x="55" y="53" text-anchor="middle" class="ring-pct" id="ringPct">0%</text>
+        <text x="55" y="66" text-anchor="middle" class="ring-label">выполнено</text>
+      </svg>
+      <div class="streak" id="streak">🔥 0 дней</div>
+    </div>
+  </header>
+
+  <nav class="day-pills">
+    <button class="arrow" id="prevWeek">‹</button>
+    <div class="pills" id="pillsContainer"></div>
+    <button class="arrow" id="nextWeek">›</button>
+  </nav>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="today">TODAY</button>
+    <button class="tab" data-tab="habits">HABITS</button>
+    <button class="tab" data-tab="tasks">TASKS</button>
+    <button class="tab" data-tab="language">LANGUAGE</button>
+    <button class="tab" data-tab="practice">PRACTICE</button>
+  </nav>
+
+  <main class="content" id="content"></main>
+</div>
+
+<!-- Модалка: форма практики -->
+<div class="modal-overlay" id="practiceModal">
+  <div class="modal">
+    <h2 class="modal-title">НОВАЯ ПРАКТИКА</h2>
+    <label class="mini-label">ТИП ПРАКТИКИ</label>
+    <input type="text" class="task-input" id="modalPrType" placeholder="Yoga, Плавание, Танцы...">
+    <div class="practice-pills" id="modalPrPills"></div>
+    <label class="mini-label">МИНУТЫ</label>
+    <input type="number" class="task-input" id="modalPrMin" value="30">
+    <div class="modal-buttons">
+      <button class="btn-accent" onclick="savePracticeForm()">ДОБАВИТЬ</button>
+      <button class="btn-muted" onclick="closePracticeModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: редактирование языка -->
+<div class="modal-overlay" id="langModal">
+  <div class="modal">
+    <h2 class="modal-title" id="langModalTitle">ЯЗЫК</h2>
+    <label class="mini-label">ЦЕЛЬ</label>
+    <input type="text" class="task-input" id="modalLangGoal" placeholder="B1 → C1">
+    <label class="mini-label">ПРОГРЕСС (%)</label>
+    <input type="number" class="task-input" id="modalLangPct" min="0" max="100" value="0">
+    <label class="mini-label">СЛОВ</label>
+    <input type="number" class="task-input" id="modalLangWords" min="0" value="0">
+    <div class="modal-buttons">
+      <button class="btn-accent" onclick="saveLangForm()">СОХРАНИТЬ</button>
+      <button class="btn-muted" onclick="closeLangModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: добавление слова -->
+<div class="modal-overlay" id="wordModal">
+  <div class="modal">
+    <h2 class="modal-title">НОВОЕ СЛОВО</h2>
+    <label class="mini-label">ОРИГИНАЛ</label>
+    <input type="text" class="task-input" id="modalWordOrig" placeholder="hello">
+    <label class="mini-label">ТРАНСКРИПЦИЯ</label>
+    <input type="text" class="task-input" id="modalWordTrans" placeholder="/хэлло́у/">
+    <label class="mini-label">ПЕРЕВОД</label>
+    <input type="text" class="task-input" id="modalWordMean" placeholder="привет">
+    <div class="modal-buttons">
+      <button class="btn-accent" onclick="saveWordForm()">ДОБАВИТЬ</button>
+      <button class="btn-muted" onclick="closeWordModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: календарь -->
+<div class="modal-overlay" id="calendarModal">
+  <div class="modal">
+    <h2 class="modal-title" id="calendarTitle">КАЛЕНДАРЬ</h2>
+    <div class="calendar-grid" id="calendarGrid"></div>
+    <div class="modal-buttons">
+      <button class="btn-accent" onclick="jumpToToday()">Сегодня</button>
+      <button class="btn-muted" onclick="closeCalendarModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<script src="words-en.js"></script>
+<script src="words-en2.js"></script>
+<script src="words-hy.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
