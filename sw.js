@@ -1,9 +1,11 @@
-const CACHE = 'focus-bitch-v3';
+const CACHE = 'focus-bitch-v4';
 const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
+  '/firebase.js',
+  '/auth.js',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -26,10 +28,20 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // Firebase CDN и API — не кэшируем
+  if (
+    url.hostname === 'www.gstatic.com' ||
+    url.hostname.includes('firebase') ||
+    url.hostname.includes('firestore.googleapis.com') ||
+    url.hostname.includes('identitytoolkit')
+  ) {
+    return;
+  }
+
   const isCode = /\.(html|css|js)$/.test(url.pathname) || url.pathname === '/';
 
   if (isCode) {
-    // NETWORK-FIRST: свежее из сети, кэш как fallback
     e.respondWith(
       fetch(e.request)
         .then(res => {
@@ -40,7 +52,6 @@ self.addEventListener('fetch', e => {
         .catch(() => caches.match(e.request))
     );
   } else {
-    // CACHE-FIRST для картинок (они не меняются)
     e.respondWith(
       caches.match(e.request).then(r => r || fetch(e.request))
     );

@@ -132,6 +132,23 @@
     <button class="onboarding-btn" id="onboardingBtn" onclick="finishOnboarding()">НАЧАТЬ</button>
   </div>
 </div>
+<!-- Экран входа через Google -->
+<div class="auth-overlay" id="authOverlay" style="display:none">
+  <div class="auth-inner">
+    <h1 class="auth-title">FOCUS BITCH.</h1>
+    <p class="auth-sub">follow the plan, not the mood.</p>
+    <p class="auth-desc">Войди через Google, чтобы твои задачи и привычки синхронизировались между всеми устройствами.</p>
+    
+    <button class="google-btn" id="googleBtn" onclick="signInWithGoogle()">
+      <span class="google-icon">G</span>
+      <span class="google-text">ВОЙТИ ЧЕРЕЗ GOOGLE</span>
+    </button>
+    
+    <div class="auth-error" id="authError" style="display:none"></div>
+    
+    <p class="auth-note">Данные хранятся в облаке. Только ты видишь их.</p>
+  </div>
+</div>
 
 <script>
 if ('serviceWorker' in navigator) {

@@ -1,17 +1,17 @@
-// ===== FOCUS BITCH PWA v7 =====
+// ===== FOCUS BITCH PWA v8 — Firebase Edition =====
 
-let tasks = JSON.parse(localStorage.getItem('fb_tasks') || '[]');
-let habits = JSON.parse(localStorage.getItem('fb_habits') || '[]');
-let practices = JSON.parse(localStorage.getItem('fb_practices') || '[]');
-let languages = JSON.parse(localStorage.getItem('fb_languages') || '[]');
-let words = JSON.parse(localStorage.getItem('fb_words') || '[]');
-let langSessions = JSON.parse(localStorage.getItem('fb_langsessions') || '[]');
-let learned = JSON.parse(localStorage.getItem('fb_learned') || '[]');
-let dailyWord = JSON.parse(localStorage.getItem('fb_dailyword') || 'null');
+let tasks = [];
+let habits = [];
+let practices = [];
+let languages = [];
+let words = [];
+let langSessions = [];
+let learned = [];
+let dailyWord = null;
 
 let activeTab = 'today';
 let viewDayOffset = 0;
-let practiceGoal = parseInt(localStorage.getItem('fb_goal') || '30');
+let practiceGoal = 30;
 let selectedPracticeType = 'Yoga';
 let openLangName = null;
 let openTaskId = null;
@@ -57,16 +57,34 @@ const LANG_TEMPLATES = [
   { name: 'КИТАЙСКИЙ', goal: 'HSK 3 → HSK 5' }
 ];
 
+// ═══ FIRESTORE SYNC ═══
+function userDoc() {
+  if (!currentUser) return null;
+  return fbDb.collection('users').doc(currentUser.uid);
+}
+
 function save() {
-  localStorage.setItem('fb_tasks', JSON.stringify(tasks));
-  localStorage.setItem('fb_habits', JSON.stringify(habits));
-  localStorage.setItem('fb_practices', JSON.stringify(practices));
-  localStorage.setItem('fb_languages', JSON.stringify(languages));
-  localStorage.setItem('fb_words', JSON.stringify(words));
-  localStorage.setItem('fb_langsessions', JSON.stringify(langSessions));
-  localStorage.setItem('fb_learned', JSON.stringify(learned));
-  localStorage.setItem('fb_dailyword', JSON.stringify(dailyWord));
-  localStorage.setItem('fb_goal', String(practiceGoal));
+  if (!currentUser) return;
+  const data = {
+    tasks, habits, practices, languages, words,
+    langSessions, learned, dailyWord, practiceGoal,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  userDoc().set(data, { merge: true }).catch(err => {
+    console.error('Save error:', err);
+  });
+}
+
+function loadFromCloud(data) {
+  tasks = data.tasks || [];
+  habits = data.habits || [];
+  practices = data.practices || [];
+  languages = data.languages || [];
+  words = data.words || [];
+  langSessions = data.langSessions || [];
+  learned = data.learned || [];
+  dailyWord = data.dailyWord || null;
+  practiceGoal = data.practiceGoal || 30;
 }
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -74,6 +92,11 @@ function viewDate() { const d = new Date(); d.setDate(d.getDate() + viewDayOffse
 function viewDateStr() { return viewDate().toISOString().slice(0, 10); }
 function months(d) { return ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][d.getMonth()]; }
 function shortDay(d) { return ['ВС','ПН','ВТ','СР','ЧТ','ПТ','СБ'][d.getDay()]; }
+function tomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -88,7 +111,6 @@ function practiceMinFor(dateStr) {
   return practices.filter(p => p.date === dateStr).reduce((s, p) => s + p.minutes, 0);
 }
 
-// ═══ Streak привычки (мягкий, Duolingo-style) ═══
 function habitStreak(h) {
   if (!h.dates) return 0;
   let streak = 0;
@@ -105,33 +127,6 @@ function habitStreak(h) {
   }
   return streak;
 }
-
-// ═══ Миграция старых привычек (days → dates) ═══
-(function migrateHabits() {
-  if (!Array.isArray(habits)) return;
-  let migrated = false;
-  habits.forEach(h => {
-    if (!h.dates) {
-      h.dates = {};
-      if (h.days) {
-        const vd = new Date();
-        const dow = vd.getDay();
-        const monOff = dow === 0 ? -6 : 1 - dow;
-        for (let i = 0; i < 7; i++) {
-          if (h.days[i]) {
-            const d = new Date(vd);
-            d.setDate(vd.getDate() + monOff + i);
-            h.dates[d.toISOString().slice(0, 10)] = true;
-          }
-        }
-      }
-      if (!h.emoji) h.emoji = '🎯';
-      delete h.days;
-      migrated = true;
-    }
-  });
-  if (migrated) save();
-})();
 
 function progressPct() {
   const ds = viewDateStr();
@@ -327,9 +322,6 @@ function renderToday(c) {
     historyHtml;
 }
 
-// ═══════════════════════════════════════════════════════
-// TASKS — с раскрытием, датой, приоритетом, удалением
-// ═══════════════════════════════════════════════════════
 function renderTasks(c) {
   const ds = viewDateStr();
   const dayTasks = tasks.filter(t => t.date === ds);
@@ -438,15 +430,6 @@ function renderTasks(c) {
   input.focus();
 }
 
-function tomorrowStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
-// ═══════════════════════════════════════════════════════
-// HABITS — карточки с пилюлями дней, streak, удаление
-// ═══════════════════════════════════════════════════════
 function renderHabits(c) {
   c.innerHTML =
     '<h2 class="section-title">ПРИВЫЧКИ</h2>' +
@@ -551,9 +534,6 @@ function renderHabits(c) {
   input.focus();
 }
 
-// ═══════════════════════════════════════════════════════
-// CONFIRM MODAL
-// ═══════════════════════════════════════════════════════
 let confirmCallback = null;
 
 function openConfirm(text, cb) {
@@ -567,20 +547,6 @@ function closeConfirm() {
   confirmCallback = null;
 }
 
-document.getElementById('confirmYes').onclick = () => {
-  if (confirmCallback) confirmCallback();
-  closeConfirm();
-};
-
-document.getElementById('confirmNo').onclick = closeConfirm;
-
-document.getElementById('confirmModal').onclick = (e) => {
-  if (e.target.id === 'confirmModal') closeConfirm();
-};
-
-// ═══════════════════════════════════════════════════════
-// ONBOARDING
-// ═══════════════════════════════════════════════════════
 let onboardingSelected = new Set();
 
 function showOnboarding(fromSettings) {
@@ -904,6 +870,10 @@ function renderAll() {
   renderContent();
 }
 
+// ═══════════════════════════════════════════
+// ЗАПУСК: авторизация + синхронизация
+// ═══════════════════════════════════════════
+
 document.querySelectorAll('.tab').forEach(el => {
   el.onclick = () => switchTab(el.dataset.tab);
 });
@@ -912,11 +882,37 @@ document.getElementById('nextWeek').onclick = () => { viewDayOffset += 7; render
 document.getElementById('dateLine').onclick = openCalendarModal;
 document.getElementById('dateLine').style.cursor = 'pointer';
 
-// Первый запуск → онбординг
-if (!localStorage.getItem('fb_onboarding_done')) {
-  document.addEventListener('DOMContentLoaded', () => {
-    showOnboarding(false);
-  });
-}
+document.getElementById('confirmYes').onclick = () => {
+  if (confirmCallback) confirmCallback();
+  closeConfirm();
+};
+document.getElementById('confirmNo').onclick = closeConfirm;
+document.getElementById('confirmModal').onclick = (e) => {
+  if (e.target.id === 'confirmModal') closeConfirm();
+};
 
-renderAll();
+// Следим за состоянием авторизации
+fbAuth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    hideAuthScreen();
+
+    // Слушаем изменения в Firestore в реальном времени
+    userDoc().onSnapshot(snapshot => {
+      if (snapshot.exists) {
+        loadFromCloud(snapshot.data());
+      } else {
+        // Первый вход — данных нет, покажем онбординг
+        if (!localStorage.getItem('fb_onboarding_done')) {
+          setTimeout(() => showOnboarding(false), 300);
+        }
+      }
+      renderAll();
+    }, err => {
+      console.error('Firestore snapshot error:', err);
+    });
+  } else {
+    currentUser = null;
+    showAuthScreen();
+  }
+});
