@@ -896,6 +896,7 @@ fbAuth.onAuthStateChanged(user => {
   if (user) {
     currentUser = user;
     hideAuthScreen();
+    hideLoadingScreen();
 
     // Слушаем изменения в Firestore в реальном времени
     userDoc().onSnapshot(snapshot => {
@@ -916,3 +917,10 @@ fbAuth.onAuthStateChanged(user => {
     showAuthScreen();
   }
 });
+function hideLoadingScreen() {
+  const el = document.getElementById('loadingOverlay');
+  if (el) el.style.display = 'none';
+}
+
+// Страховка: если Firebase не ответит за 5 секунд — убираем загрузку
+setTimeout(hideLoadingScreen, 5000);

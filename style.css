@@ -967,3 +967,71 @@ body {
   margin-top: 24px;
   line-height: 1.4;
 }
+/* ═══ LOADING SCREEN ═══ */
+.loading-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loading-inner {
+  text-align: center;
+}
+
+.loading-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--divider);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-sub {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ═══ FIX: кольцо не наезжает на заголовок ═══ */
+@media (max-width: 400px) {
+  .ring-wrap {
+    transform: scale(0.85);
+    transform-origin: top right;
+    top: -4px;
+    right: -4px;
+  }
+  .title {
+    font-size: 36px;
+    max-width: calc(100% - 80px);
+  }
+}
+
+@media (max-width: 340px) {
+  .ring-wrap {
+    transform: scale(0.75);
+  }
+  .title {
+    font-size: 32px;
+    max-width: calc(100% - 70px);
+  }
+}
