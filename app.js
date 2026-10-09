@@ -382,7 +382,15 @@ function renderTasks(c) {
     btn.onclick = () => {
       const id = +btn.dataset.check;
       const t = tasks.find(x => x.id === id);
-      if (t) { t.done = !t.done; save(); renderAll(); }
+      if (!t) return;
+      t.done = !t.done;
+      btn.classList.toggle('done');
+      const row = btn.closest('.task-row');
+      const txt = row.querySelector('.task-text');
+      if (txt) txt.classList.toggle('done');
+      renderRing();
+      renderStreak();
+      save();
     };
   });
 
@@ -413,7 +421,10 @@ function renderTasks(c) {
       const id = +btn.dataset.date;
       const val = btn.dataset.val;
       const t = tasks.find(x => x.id === id);
-      if (t) { t.date = val; save(); renderAll(); }
+      if (!t) return;
+      t.date = val;
+      save();
+      renderTasks(document.getElementById('content'));
     };
   });
 
@@ -423,11 +434,12 @@ function renderTasks(c) {
       const id = +btn.dataset.prio;
       const val = btn.dataset.val;
       const t = tasks.find(x => x.id === id);
-      if (t) { t.prio = val; save(); renderAll(); }
+      if (!t) return;
+      t.prio = val;
+      save();
+      renderTasks(document.getElementById('content'));
     };
   });
-
-  input.focus();
 }
 
 function renderHabits(c) {
@@ -495,12 +507,33 @@ function renderHabits(c) {
       const id = +btn.dataset.habit;
       const ds = btn.dataset.date;
       const h = habits.find(x => x.id === id);
-      if (h) {
-        if (!h.dates) h.dates = {};
-        if (h.dates[ds]) delete h.dates[ds];
-        else h.dates[ds] = true;
-        save(); renderAll();
+      if (!h) return;
+      if (!h.dates) h.dates = {};
+      if (h.dates[ds]) delete h.dates[ds];
+      else h.dates[ds] = true;
+      btn.classList.toggle('done');
+      const card = btn.closest('.habit-card');
+      if (card) {
+        const header = card.querySelector('.habit-header');
+        const st = habitStreak(h);
+        const streakEl = card.querySelector('.habit-streak');
+        if (st > 0) {
+          if (streakEl) {
+            streakEl.textContent = '\u{1F525} ' + st;
+          } else {
+            const delBtn = header.querySelector('.habit-del');
+            const span = document.createElement('span');
+            span.className = 'habit-streak';
+            span.textContent = '\u{1F525} ' + st;
+            header.insertBefore(span, delBtn);
+          }
+        } else if (streakEl) {
+          streakEl.remove();
+        }
       }
+      renderRing();
+      renderStreak();
+      save();
     };
   });
 
@@ -530,8 +563,6 @@ function renderHabits(c) {
   });
 
   document.getElementById('onboardBtn').onclick = () => showOnboarding(true);
-
-  input.focus();
 }
 
 let confirmCallback = null;
